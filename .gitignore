@@ -1,2 +1,5 @@
-./back/.xmake
-./back/build
+/.idea/*
+/back/
+.xmake/*
+build/*
+
