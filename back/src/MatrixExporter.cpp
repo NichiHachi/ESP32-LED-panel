@@ -1,6 +1,6 @@
 #include "MatrixExporter.h"
 
-PixelMatrix MatrixExporter::to_2d_matrix(const Frame& frame) {
+PixelMatrix MatrixExporter::to_2d_matrix(const Frame &frame) {
     PixelMatrix matrix(frame.height, std::vector<RGB>(frame.width));
     for (int y = 0; y < frame.height; ++y) {
         for (int x = 0; x < frame.width; ++x) {
@@ -10,7 +10,7 @@ PixelMatrix MatrixExporter::to_2d_matrix(const Frame& frame) {
     return matrix;
 }
 
-PixelMatrix MatrixExporter::to_serpentine_matrix(const Frame& frame) {
+PixelMatrix MatrixExporter::to_serpentine_matrix(const Frame &frame) {
     PixelMatrix matrix(frame.height, std::vector<RGB>(frame.width));
     for (int y = 0; y < frame.height; ++y) {
         for (int x = 0; x < frame.width; ++x) {

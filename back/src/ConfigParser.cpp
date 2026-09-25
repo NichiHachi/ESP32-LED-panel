@@ -97,7 +97,6 @@ bool ConfigParser::save_to_file(
     j["options"]["flip_vertical"] = opts.flip_vertical;
     j["options"]["background_color"] = {opts.background_color.r, opts.background_color.g, opts.background_color.b};
 
-    // Conversion enum vers string
     if (opts.fit_mode == FitMode::STRETCH) j["options"]["fit_mode"] = "STRETCH";
     else if (opts.fit_mode == FitMode::CROP) j["options"]["fit_mode"] = "CROP";
     else j["options"]["fit_mode"] = "LETTERBOX";

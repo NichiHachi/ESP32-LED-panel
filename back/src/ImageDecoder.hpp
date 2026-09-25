@@ -17,8 +17,8 @@ class ImageDecoder {
 public:
     static RawImageData decode_from_memory(const std::string_view bytes) {
         RawImageData img;
-        unsigned char* data = stbi_load_from_memory(
-            reinterpret_cast<const uint8_t*>(bytes.data()),
+        unsigned char *data = stbi_load_from_memory(
+            reinterpret_cast<const uint8_t *>(bytes.data()),
             static_cast<int>(bytes.size()),
             &img.width, &img.height, &img.channels, 3 // Forcer en RGB (3 canaux)
         );

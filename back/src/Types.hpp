@@ -50,4 +50,4 @@ struct ProcessingOptions {
     bool flip_vertical = false;
 };
 
-using PixelMatrix = std::vector<std::vector<RGB>>;
+using PixelMatrix = std::vector<std::vector<RGB> >;
