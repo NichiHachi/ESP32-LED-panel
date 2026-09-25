@@ -1,0 +1,16 @@
+set_project("ESPLedManager")
+set_version("1.0.0")
+set_languages("c++20")
+
+add_requires("stb")
+add_requires("nlohmann_json")
+add_requires("crow")
+
+target("ESPLedManager")
+set_kind("binary")
+add_includedirs("src")
+add_files("src/**.cpp")
+add_packages("stb")
+add_packages("nlohmann_json")
+add_packages("crow")
+set_rundir("$(projectdir)")

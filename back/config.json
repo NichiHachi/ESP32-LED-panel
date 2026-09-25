@@ -1,0 +1,23 @@
+{
+    "matrix": {
+        "enable_serpentine_layout": true,
+        "height": 32,
+        "max_palette_colors": 16,
+        "width": 32
+    },
+    "options": {
+        "background_color": [
+            0,
+            0,
+            0
+        ],
+        "brightness": 1.5,
+        "color_mode": "QUANTIZED_KMEANS",
+        "contrast": 1.2,
+        "fit_mode": "LETTERBOX",
+        "flip_horizontal": false,
+        "flip_vertical": false,
+        "gamma": 1.0,
+        "rotation_deg": 0
+    }
+}
