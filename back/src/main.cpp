@@ -6,7 +6,6 @@
 #include "ImageEncoder.hpp"
 
 using json = nlohmann::json;
-NLOHMANN_DEFINE_TYPE_NON_INTRUSIVE(RGB, r, g, b);
 
 int main() {
     auto app_context = std::make_shared<AppContext>("config.json");
@@ -15,17 +14,22 @@ int main() {
     CROW_ROUTE(app, "/").methods(crow::HTTPMethod::POST)([&app_context](const crow::request &req) {
         crow::multipart::message msg(req);
         std::string_view image_bytes;
+        bool return_matrix = false;
+
+        if (req.url_params.get("return_matrix") != nullptr) {
+            std::string param = req.url_params.get("return_matrix");
+            return_matrix = (param == "true" || param == "1");
+        }
 
         for (const auto &part: msg.parts) {
-            auto disposition = part.get_header_object("Content-Disposition");
+            if (auto disposition = part.get_header_object("Content-Disposition"); disposition.params.count("name")) {
+                std::string name = disposition.params.at("name");
 
-            if (disposition.params.count("name") && disposition.params.at("name") == "image") {
-                image_bytes = part.body;
-                break;
-            }
-            if (disposition.params.count("filename")) {
-                image_bytes = part.body;
-                break;
+                if (name == "image" || disposition.params.count("filename")) {
+                    image_bytes = part.body;
+                } else if (name == "return_matrix") {
+                    return_matrix = (part.body == "true" || part.body == "1");
+                }
             }
         }
 
@@ -37,33 +41,53 @@ int main() {
             return crow::response(400, "Aucune image reçue.");
         }
 
-        // 1. Décodage de l'image reçue en mémoire
         RawImageData raw_img = ImageDecoder::decode_from_memory(image_bytes);
         if (!raw_img.valid) {
             return crow::response(400, "Impossible de décoder l'image transmise.");
         }
 
-        // 2. Traitement via le moteur PixelEngine (utilise la config en mémoire RAM)
         const Frame processed_frame = app_context->process_image(raw_img.pixels.data(), raw_img.width, raw_img.height);
 
-        // 3. Encodage du résultat au format PNG
-        std::vector<uint8_t> png_output = ImageEncoder::encode_to_png(processed_frame);
+        if (return_matrix) {
+            json matrix_res;
+            matrix_res["width"] = processed_frame.width;
+            matrix_res["height"] = processed_frame.height;
 
-        // 4. Envoi du PNG en réponse HTTP
-        crow::response res;
-        res.code = 200;
-        res.set_header("Content-Type", "image/png");
-        res.body = std::string(png_output.begin(), png_output.end());
-        return res;
+            json pixels_array = json::array();
+            for (const auto &pixel: processed_frame.pixels) {
+                pixels_array.push_back({
+                    {"r", pixel.r},
+                    {"g", pixel.g},
+                    {"b", pixel.b}
+                });
+            }
+            matrix_res["pixels"] = pixels_array;
+
+            crow::response res;
+            res.code = 200;
+            res.set_header("Content-Type", "application/json");
+            res.body = matrix_res.dump();
+            return res;
+        } else {
+            std::vector<uint8_t> png_output = ImageEncoder::encode_to_png(processed_frame);
+
+            crow::response res;
+            res.code = 200;
+            res.set_header("Content-Type", "image/png");
+            res.body = std::string(png_output.begin(), png_output.end());
+            return res;
+        }
     });
 
-    // Route GET /api/config : Récupérer la configuration courante
     CROW_ROUTE(app, "/api/config").methods(crow::HTTPMethod::GET)([&app_context]() {
         auto [matrix_cfg, opts] = app_context->get_config();
 
         json response;
         response["matrix"]["width"] = matrix_cfg.width;
         response["matrix"]["height"] = matrix_cfg.height;
+        response["matrix"]["max_palette_colors"] = matrix_cfg.max_palette_colors;
+        response["matrix"]["enable_serpentine_layout"] = matrix_cfg.enable_serpentine_layout;
+
         response["options"]["brightness"] = opts.brightness;
         response["options"]["contrast"] = opts.contrast;
         response["options"]["gamma"] = opts.gamma;
@@ -72,7 +96,11 @@ int main() {
         response["options"]["flip_vertical"] = opts.flip_vertical;
         response["options"]["fit_mode"] = opts.fit_mode;
         response["options"]["color_mode"] = opts.color_mode;
-        response["options"]["background_color"] = opts.background_color;
+        response["options"]["background_color"] = json::array({
+            opts.background_color.r,
+            opts.background_color.g,
+            opts.background_color.b
+        });
 
         return crow::response(200, response.dump());
     });

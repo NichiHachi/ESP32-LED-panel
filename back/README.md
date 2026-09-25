@@ -268,6 +268,41 @@ curl -X POST http://localhost:18080/ \
      --output rendu_matrice.png
 ```
 
+Pour ajouter un choix entre la restitution d'une **image PNG** ou d'un **tableau JSON de la matrice de pixels**, il convient de récupérer le champ booléen (par exemple `return_matrix` ou `output=matrix`) depuis le formulaire multipart ou les paramètres de requête (*query params*).
+
+Vous pouvez spécifier le paramètre `return_matrix` soit via le **URL Query Parameter**, soit via le **Form-Data multipart** :
+
+#### Option 1 : Via l'URL (Query Param)
+
+```bash
+curl -X POST "http://localhost:18080/?return_matrix=true" \
+     -F "image=@/chemin/vers/mon_image.jpg"
+
+```
+
+#### Option 2 : Via le formulaire multipart (`-F`)
+
+```bash
+curl -X POST http://localhost:18080/ \
+     -F "image=@/chemin/vers/mon_image.jpg" \
+     -F "return_matrix=true"
+
+```
+
+#### Exemple de réponse JSON si `return_matrix=true` :
+
+```json
+{
+  "width": 16,
+  "height": 16,
+  "pixels": [
+    { "r": 255, "g": 0, "b": 0 },
+    { "r": 0, "g": 255, "b": 0 },
+    ...
+  ]
+}
+
+```
 ---
 
 ## Exemples d'intégration Frontend (JavaScript / Fetch)
