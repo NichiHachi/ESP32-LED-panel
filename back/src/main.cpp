@@ -7,6 +7,11 @@
 
 using json = nlohmann::json;
 
+// Fonction utilitaire pour vérifier si le buffer commence par les octets magiques d'un ZIP ("PK\x03\x04")
+bool is_zip_file(std::string_view bytes) {
+    return bytes.size() >= 4 && bytes[0] == 'P' && bytes[1] == 'K' && bytes[2] == 0x03 && bytes[3] == 0x04;
+}
+
 int main() {
     auto app_context = std::make_shared<AppContext>("config.json");
     crow::SimpleApp app;
@@ -15,20 +20,27 @@ int main() {
         crow::multipart::message msg(req);
         std::string_view image_bytes;
         bool return_matrix = false;
+        bool return_zip = false;
 
         if (req.url_params.get("return_matrix") != nullptr) {
             std::string param = req.url_params.get("return_matrix");
             return_matrix = (param == "true" || param == "1");
+        }
+        if (req.url_params.get("return_zip") != nullptr) {
+            std::string param = req.url_params.get("return_zip");
+            return_zip = (param == "true" || param == "1");
         }
 
         for (const auto &part: msg.parts) {
             if (auto disposition = part.get_header_object("Content-Disposition"); disposition.params.count("name")) {
                 std::string name = disposition.params.at("name");
 
-                if (name == "image" || disposition.params.count("filename")) {
+                if (name == "image" || name == "file" || disposition.params.count("filename")) {
                     image_bytes = part.body;
                 } else if (name == "return_matrix") {
                     return_matrix = (part.body == "true" || part.body == "1");
+                } else if (name == "return_zip") {
+                    return_zip = (part.body == "true" || part.body == "1");
                 }
             }
         }
@@ -38,43 +50,112 @@ int main() {
         }
 
         if (image_bytes.empty()) {
-            return crow::response(400, "Aucune image reçue.");
+            return crow::response(400, "Aucun fichier (image ou ZIP) reçu.");
         }
 
-        RawImageData raw_img = ImageDecoder::decode_from_memory(image_bytes);
-        if (!raw_img.valid) {
-            return crow::response(400, "Impossible de décoder l'image transmise.");
+        // 1. Décodage : Détection automatique ZIP ou Image classique/GIF
+        AnimationData anim;
+        if (is_zip_file(image_bytes)) {
+            anim = ImageDecoder::decode_zip_from_memory(image_bytes);
+        } else {
+            anim = ImageDecoder::decode_animation_from_memory(image_bytes);
         }
 
-        const Frame processed_frame = app_context->process_image(raw_img.pixels.data(), raw_img.width, raw_img.height);
+        if (!anim.valid || anim.frames.empty()) {
+            return crow::response(400, "Impossible de décoder le fichier ou le contenu du ZIP.");
+        }
 
-        if (return_matrix) {
-            json matrix_res;
-            matrix_res["width"] = processed_frame.width;
-            matrix_res["height"] = processed_frame.height;
+        // 2. Traitement de toutes les frames par le moteur PixelEngine
+        std::vector<Frame> processed_frames;
+        processed_frames.reserve(anim.frames.size());
 
-            json pixels_array = json::array();
-            for (const auto &pixel: processed_frame.pixels) {
-                pixels_array.push_back({
-                    {"r", pixel.r},
-                    {"g", pixel.g},
-                    {"b", pixel.b}
-                });
+        for (const auto &raw_frame: anim.frames) {
+            processed_frames.push_back(
+                app_context->process_image(raw_frame.pixels.data(), raw_frame.width, raw_frame.height)
+            );
+        }
+
+        auto [matrix_cfg, opts] = app_context->get_config();
+        const bool is_serpentine = matrix_cfg.enable_serpentine_layout;
+
+        // 3. Cas A : Retour sous forme d'archive ZIP
+        if (return_zip) {
+            std::vector<uint8_t> zip_bytes = ImageEncoder::encode_frames_to_zip(processed_frames, is_serpentine);
+            if (zip_bytes.empty()) {
+                return crow::response(500, "Erreur lors de la génération du fichier ZIP.");
             }
-            matrix_res["pixels"] = pixels_array;
 
             crow::response res;
             res.code = 200;
-            res.set_header("Content-Type", "application/json");
-            res.body = matrix_res.dump();
+            res.set_header("Content-Type", "application/zip");
+            res.set_header("Content-Disposition", "attachment; filename=\"processed_frames.zip\"");
+            res.body = std::string(zip_bytes.begin(), zip_bytes.end());
             return res;
-        } else {
-            std::vector<uint8_t> png_output = ImageEncoder::encode_to_png(processed_frame);
+        }
 
+        // 4. Cas B : Matrice de pixels (JSON)
+        if (return_matrix) {
+            json response_json;
+            response_json["is_animated"] = anim.is_animated;
+            response_json["frame_count"] = processed_frames.size();
+
+            json frames_json = json::array();
+            for (size_t i = 0; i < processed_frames.size(); ++i) {
+                json frame_obj;
+                frame_obj["width"] = processed_frames[i].width;
+                frame_obj["height"] = processed_frames[i].height;
+                frame_obj["delay_ms"] = anim.frames[i].delay_ms;
+
+                json pixels_array = json::array();
+                for (const auto &pixel: processed_frames[i].pixels) {
+                    pixels_array.push_back({
+                        {"r", pixel.r},
+                        {"g", pixel.g},
+                        {"b", pixel.b}
+                    });
+                }
+                frame_obj["pixels"] = pixels_array;
+                frames_json.push_back(frame_obj);
+            }
+
+            response_json["frames"] = frames_json;
+
+            crow::response res(200, response_json.dump());
+            res.set_header("Content-Type", "application/json");
+            return res;
+        }
+
+        // 5. Cas C : Image fixe PNG seule OU liste des frames encodées en Base64
+        if (!anim.is_animated) {
+            std::vector<uint8_t> png_output = ImageEncoder::encode_to_png(processed_frames[0], is_serpentine);
             crow::response res;
             res.code = 200;
             res.set_header("Content-Type", "image/png");
             res.body = std::string(png_output.begin(), png_output.end());
+            return res;
+        } else {
+            json response_json;
+            response_json["is_animated"] = true;
+            response_json["frame_count"] = processed_frames.size();
+
+            json png_list = json::array();
+            for (size_t i = 0; i < processed_frames.size(); ++i) {
+                std::vector<uint8_t> png_bytes = ImageEncoder::encode_to_png(processed_frames[i]);
+
+                std::string b64_png = crow::utility::base64encode(
+                    reinterpret_cast<const char *>(png_bytes.data()), png_bytes.size()
+                );
+
+                png_list.push_back({
+                    {"index", i},
+                    {"delay_ms", anim.frames[i].delay_ms},
+                    {"png_base64", b64_png}
+                });
+            }
+            response_json["frames"] = png_list;
+
+            crow::response res(200, response_json.dump());
+            res.set_header("Content-Type", "application/json");
             return res;
         }
     });

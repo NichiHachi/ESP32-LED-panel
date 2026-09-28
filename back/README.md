@@ -256,7 +256,19 @@ curl -X POST http://localhost:18080/api/config \
 curl -X POST http://localhost:18080/ \
      -F "image=@/chemin/vers/mon_image.jpg" \
      --output rendu_matrice.png
+```
 
+Pour recevoir directement les frame dans un flux en base64 :
+```bash
+curl -X POST "http://localhost:18080/" 
+     -F "image=@back/example/halteroman.gif"
+```
+
+Avec pour retour un fichier zip contenant les frames :
+```bash
+curl -X POST "http://localhost:18080/?return_zip=true" \
+     -F "image=@back/example/kevin.gif" \
+     --output frames.zip
 ```
 
 **Option B : Via l'envoi du binaire brut dans le corps de la requête**
@@ -277,7 +289,6 @@ Vous pouvez spécifier le paramètre `return_matrix` soit via le **URL Query Par
 ```bash
 curl -X POST "http://localhost:18080/?return_matrix=true" \
      -F "image=@/chemin/vers/mon_image.jpg"
-
 ```
 
 #### Option 2 : Via le formulaire multipart (`-F`)
@@ -286,7 +297,6 @@ curl -X POST "http://localhost:18080/?return_matrix=true" \
 curl -X POST http://localhost:18080/ \
      -F "image=@/chemin/vers/mon_image.jpg" \
      -F "return_matrix=true"
-
 ```
 
 #### Exemple de réponse JSON si `return_matrix=true` :
@@ -304,6 +314,42 @@ curl -X POST http://localhost:18080/ \
 
 ```
 ---
+
+#### Exemple de réponse JSON si l'option animated est selectionnée
+
+`return_matrix=true` :
+
+```json
+{
+  "is_animated": true,
+  "frames": [
+    {
+      "width": 16,
+      "height": 16,
+      "delay_ms": 100,
+      "pixels": [ {"r": 255, "g": 0, "b": 0}, ... ]
+    },
+    ...
+  ]
+}
+```
+
+`return_matrix=false` : 
+
+```json
+{
+   "is_animated": true,
+   "frame_count": 10,
+   "frames": [
+      {
+         "index": 0,
+         "delay_ms": 100,
+         "png_base64": "iVBORw0KGgoAAAANSUhEUgAA..."
+      },
+      ...
+   ]
+}
+```
 
 ## Exemples d'intégration Frontend (JavaScript / Fetch)
 

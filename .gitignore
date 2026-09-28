@@ -1,5 +1,5 @@
 /.idea/*
-/back/
-.xmake/*
-build/*
-
+/back/.xmake/*
+/back/build/*
+/unziped/
+/.xmake/
