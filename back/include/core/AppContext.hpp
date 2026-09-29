@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Types.hpp"
-#include "PixelEngine.h"
-#include "ConfigParser.h"
+#include "core/Types.hpp"
+#include "core/PixelEngine.h"
+#include "io/ConfigParser.h"
 #include <mutex>
 #include <memory>
 #include <string>

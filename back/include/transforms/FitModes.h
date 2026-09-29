@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../Types.hpp"
+#include "core/Types.hpp"
 
 class FitProcessor {
 public:

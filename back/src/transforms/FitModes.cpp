@@ -1,4 +1,4 @@
-#include "FitModes.h"
+#include "transforms/FitModes.h"
 #include <cmath>
 #include <algorithm>
 

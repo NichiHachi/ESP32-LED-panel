@@ -1,4 +1,4 @@
-#include "PixelEngine.h"
+#include "core/PixelEngine.h"
 #include "transforms/FitModes.h"
 #include "transforms/ColorModes.h"
 #include "transforms/GeometryTransforms.h"

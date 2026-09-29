@@ -1,4 +1,4 @@
-#include "MatrixExporter.h"
+#include "exporters/MatrixExporter.h"
 
 PixelMatrix MatrixExporter::to_2d_matrix(const Frame &frame) {
     PixelMatrix matrix(frame.height, std::vector<RGB>(frame.width));

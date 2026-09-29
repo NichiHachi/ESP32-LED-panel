@@ -1,9 +1,9 @@
 #include "crow.h"
 #include <nlohmann/json.hpp>
 
-#include "AppContext.hpp"
-#include "ImageDecoder.hpp"
-#include "ImageEncoder.hpp"
+#include "core/AppContext.hpp"
+#include "io/ImageDecoder.hpp"
+#include "io/ImageEncoder.hpp"
 
 using json = nlohmann::json;
 
