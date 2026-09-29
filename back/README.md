@@ -60,6 +60,17 @@ cargo run --release
 
 Le serveur sera alors accessible à l'adresse `http://localhost:18080` par défaut.
 
+### Logs
+
+Le backend écrit les logs sur la sortie standard. Le niveau par défaut est `info` ; utilisez
+`RUST_LOG` pour obtenir davantage de détails :
+
+```bash
+RUST_LOG=debug cargo run --release
+```
+
+Les niveaux disponibles sont notamment `error`, `warn`, `info` et `debug`.
+
 ---
 
 ## Endpoints API

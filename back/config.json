@@ -11,10 +11,10 @@
       "g": 0,
       "r": 0
     },
-    "brightness": 1.2,
+    "brightness": 1.2000000476837158,
     "color_mode": "QUANTIZED_KMEANS",
-    "contrast": 1.1,
-    "fit_mode": "LETTERBOX",
+    "contrast": 1.100000023841858,
+    "fit_mode": "CROP",
     "flip_horizontal": false,
     "flip_vertical": false,
     "gamma": 1.0,

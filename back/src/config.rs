@@ -1,5 +1,6 @@
 use serde_json::{json, Value};
 use std::fs;
+use tracing::{error, warn};
 
 use crate::models::{AppContext, MatrixConfig, Options, Rgb};
 
@@ -39,9 +40,20 @@ pub fn load_config(path: &str) -> AppContext {
     };
     if let Ok(contents) = fs::read_to_string(path) {
         if let Ok(value) = serde_json::from_str::<Value>(&contents) {
-            apply_update(&value, &mut context.matrix, &mut context.options).ok();
+            if let Err(message) = apply_update(&value, &mut context.matrix, &mut context.options) {
+                warn!(path, error = %message, "Configuration invalide, valeurs par défaut conservées");
+            }
+        } else {
+            warn!(
+                path,
+                "Configuration JSON invalide, valeurs par défaut conservées"
+            );
         }
     } else {
+        warn!(
+            path,
+            "Fichier de configuration absent, création des valeurs par défaut"
+        );
         save_config(&context);
     }
     context
@@ -49,10 +61,12 @@ pub fn load_config(path: &str) -> AppContext {
 
 pub fn save_config(context: &AppContext) {
     let value = json!({ "matrix": context.matrix, "options": context.options });
-    let _ = fs::write(
+    if let Err(error) = fs::write(
         &context.config_path,
         serde_json::to_string_pretty(&value).unwrap(),
-    );
+    ) {
+        error!(path = %context.config_path, %error, "Impossible de sauvegarder la configuration");
+    }
 }
 
 pub fn apply_update(
