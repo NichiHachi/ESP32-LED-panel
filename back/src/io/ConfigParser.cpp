@@ -2,20 +2,23 @@
 #include <fstream>
 #include <iostream>
 #include <algorithm>
+#include <filesystem>
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-FitMode ConfigParser::string_to_fit_mode(const std::string &str) {
-    if (str == "STRETCH") return FitMode::STRETCH;
-    if (str == "CROP") return FitMode::CROP;
-    return FitMode::LETTERBOX;
+std::optional<FitMode> ConfigParser::parse_fit_mode(const std::string_view value) {
+    if (value == "STRETCH") return FitMode::STRETCH;
+    if (value == "CROP") return FitMode::CROP;
+    if (value == "LETTERBOX") return FitMode::LETTERBOX;
+    return std::nullopt;
 }
 
-ColorMode ConfigParser::string_to_color_mode(const std::string &str) {
-    if (str == "GRAYSCALE") return ColorMode::GRAYSCALE;
-    if (str == "RGB565") return ColorMode::RGB565;
-    return ColorMode::QUANTIZED_KMEANS;
+std::optional<ColorMode> ConfigParser::parse_color_mode(const std::string_view value) {
+    if (value == "GRAYSCALE") return ColorMode::GRAYSCALE;
+    if (value == "RGB565") return ColorMode::RGB565;
+    if (value == "QUANTIZED_KMEANS") return ColorMode::QUANTIZED_KMEANS;
+    return std::nullopt;
 }
 
 bool ConfigParser::load_from_file(
@@ -48,10 +51,14 @@ bool ConfigParser::load_from_file(
             auto &o = j["options"];
 
             if (o.contains("fit_mode")) {
-                out_opts.fit_mode = string_to_fit_mode(o["fit_mode"].get<std::string>());
+                const auto mode = parse_fit_mode(o["fit_mode"].get<std::string>());
+                if (!mode) throw json::type_error::create(302, "invalid fit_mode", &o["fit_mode"]);
+                out_opts.fit_mode = *mode;
             }
             if (o.contains("color_mode")) {
-                out_opts.color_mode = string_to_color_mode(o["color_mode"].get<std::string>());
+                const auto mode = parse_color_mode(o["color_mode"].get<std::string>());
+                if (!mode) throw json::type_error::create(302, "invalid color_mode", &o["color_mode"]);
+                out_opts.color_mode = *mode;
             }
             if (o.contains("background_color") && o["background_color"].is_array() && o["background_color"].size() >=
                 3) {

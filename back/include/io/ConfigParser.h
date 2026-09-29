@@ -1,7 +1,9 @@
 #pragma once
 
 #include "core/Types.hpp"
+#include <optional>
 #include <string>
+#include <string_view>
 
 class ConfigParser {
 public:
@@ -17,8 +19,7 @@ public:
         const ProcessingOptions &opts
     );
 
-private:
-    static FitMode string_to_fit_mode(const std::string &str);
+    static std::optional<FitMode> parse_fit_mode(std::string_view value);
 
-    static ColorMode string_to_color_mode(const std::string &str);
+    static std::optional<ColorMode> parse_color_mode(std::string_view value);
 };

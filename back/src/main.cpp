@@ -4,12 +4,86 @@
 #include "core/AppContext.hpp"
 #include "io/ImageDecoder.hpp"
 #include "io/ImageEncoder.hpp"
+#include "io/ConfigParser.h"
+#include <cmath>
 
 using json = nlohmann::json;
 
-// Fonction utilitaire pour vérifier si le buffer commence par les octets magiques d'un ZIP ("PK\x03\x04")
-bool is_zip_file(std::string_view bytes) {
+namespace {
+constexpr size_t max_upload_size = 32 * 1024 * 1024; // limited to 32 MB
+constexpr int max_matrix_dimension = 1024;
+constexpr int max_palette_size = 256;
+
+bool is_zip_file(const std::string_view bytes) {
     return bytes.size() >= 4 && bytes[0] == 'P' && bytes[1] == 'K' && bytes[2] == 0x03 && bytes[3] == 0x04;
+}
+
+void apply_config_update(
+    const json &body,
+    LedMatrixConfig &matrix_cfg,
+    ProcessingOptions &opts
+) {
+    const json matrix_json = body.contains("matrix") ? body.at("matrix") : body;
+    const json opts_json = body.contains("options") ? body.at("options") : body;
+
+    if (!matrix_json.is_object() || !opts_json.is_object()) {
+        throw json::type_error::create(302, "matrix/options must be objects", &body);
+    }
+
+    if (matrix_json.contains("width")) matrix_cfg.width = matrix_json.at("width").get<int>();
+    if (matrix_json.contains("height")) matrix_cfg.height = matrix_json.at("height").get<int>();
+    if (matrix_json.contains("max_palette_colors")) {
+        matrix_cfg.max_palette_colors = matrix_json.at("max_palette_colors").get<int>();
+    }
+    if (matrix_json.contains("enable_serpentine_layout")) {
+        matrix_cfg.enable_serpentine_layout = matrix_json.at("enable_serpentine_layout").get<bool>();
+    }
+
+    if (opts_json.contains("brightness")) opts.brightness = opts_json.at("brightness").get<float>();
+    if (opts_json.contains("contrast")) opts.contrast = opts_json.at("contrast").get<float>();
+    if (opts_json.contains("gamma")) opts.gamma = opts_json.at("gamma").get<float>();
+    if (opts_json.contains("rotation_deg")) opts.rotation_deg = opts_json.at("rotation_deg").get<int>();
+    if (opts_json.contains("flip_horizontal")) opts.flip_horizontal = opts_json.at("flip_horizontal").get<bool>();
+    if (opts_json.contains("flip_vertical")) opts.flip_vertical = opts_json.at("flip_vertical").get<bool>();
+
+    if (opts_json.contains("fit_mode")) {
+        const auto mode = ConfigParser::parse_fit_mode(opts_json.at("fit_mode").get<std::string>());
+        if (!mode) throw json::out_of_range::create(401, "invalid fit_mode", &opts_json.at("fit_mode"));
+        opts.fit_mode = *mode;
+    }
+    if (opts_json.contains("color_mode")) {
+        const auto mode = ConfigParser::parse_color_mode(opts_json.at("color_mode").get<std::string>());
+        if (!mode) throw json::out_of_range::create(401, "invalid color_mode", &opts_json.at("color_mode"));
+        opts.color_mode = *mode;
+    }
+    if (opts_json.contains("background_color")) {
+        const auto &color = opts_json.at("background_color");
+        if (!color.is_array() || color.size() != 3) {
+            throw json::type_error::create(302, "background_color must contain 3 values", &color);
+        }
+        opts.background_color = {
+            color.at(0).get<uint8_t>(),
+            color.at(1).get<uint8_t>(),
+            color.at(2).get<uint8_t>()
+        };
+    }
+
+    if (matrix_cfg.width <= 0 || matrix_cfg.width > max_matrix_dimension ||
+        matrix_cfg.height <= 0 || matrix_cfg.height > max_matrix_dimension) {
+        throw json::out_of_range::create(401, "matrix dimensions are out of range", &body);
+    }
+    if (matrix_cfg.max_palette_colors <= 0 || matrix_cfg.max_palette_colors > max_palette_size) {
+        throw json::out_of_range::create(401, "max_palette_colors is out of range", &body);
+    }
+    if (!std::isfinite(opts.brightness) || opts.brightness < 0.0f ||
+        !std::isfinite(opts.contrast) || opts.contrast < 0.0f ||
+        !std::isfinite(opts.gamma) || opts.gamma <= 0.0f) {
+        throw json::out_of_range::create(401, "color correction values are invalid", &body);
+    }
+    if (opts.rotation_deg % 90 != 0) {
+        throw json::out_of_range::create(401, "rotation_deg must be a multiple of 90", &body);
+    }
+}
 }
 
 int main() {
@@ -51,6 +125,9 @@ int main() {
 
         if (image_bytes.empty()) {
             return crow::response(400, "Aucun fichier (image ou ZIP) reçu.");
+        }
+        if (image_bytes.size() > max_upload_size) {
+            return crow::response(413, "Fichier trop volumineux.");
         }
 
         // 1. Décodage : Détection automatique ZIP ou Image classique/GIF
@@ -175,8 +252,12 @@ int main() {
         response["options"]["rotation_deg"] = opts.rotation_deg;
         response["options"]["flip_horizontal"] = opts.flip_horizontal;
         response["options"]["flip_vertical"] = opts.flip_vertical;
-        response["options"]["fit_mode"] = opts.fit_mode;
-        response["options"]["color_mode"] = opts.color_mode;
+        response["options"]["fit_mode"] = opts.fit_mode == FitMode::CROP
+                                               ? "CROP"
+                                               : opts.fit_mode == FitMode::STRETCH ? "STRETCH" : "LETTERBOX";
+        response["options"]["color_mode"] = opts.color_mode == ColorMode::GRAYSCALE
+                                                ? "GRAYSCALE"
+                                                : opts.color_mode == ColorMode::RGB565 ? "RGB565" : "QUANTIZED_KMEANS";
         response["options"]["background_color"] = json::array({
             opts.background_color.r,
             opts.background_color.g,
@@ -196,52 +277,14 @@ int main() {
 
         json matrix_json = body.contains("matrix") ? body["matrix"] : body;
 
-        if (matrix_json.contains("width"))
-            matrix_cfg.width = matrix_json["width"].get<uint16_t>();
-        if (matrix_json.contains("height"))
-            matrix_cfg.height = matrix_json["height"].get<uint16_t>();
-        if (matrix_json.contains("max_palette_colors"))
-            matrix_cfg.max_palette_colors = matrix_json["max_palette_colors"].get<size_t>();
-        if (matrix_json.contains("enable_serpentine_layout"))
-            matrix_cfg.enable_serpentine_layout = matrix_json["enable_serpentine_layout"].get<bool>();
-
-        json opts_json = body.contains("options") ? body["options"] : body;
-
-        if (opts_json.contains("brightness"))
-            opts.brightness = opts_json["brightness"].get<float>();
-        if (opts_json.contains("contrast"))
-            opts.contrast = opts_json["contrast"].get<float>();
-        if (opts_json.contains("gamma"))
-            opts.gamma = opts_json["gamma"].get<float>();
-        if (opts_json.contains("rotation_deg"))
-            opts.rotation_deg = opts_json["rotation_deg"].get<int>();
-        if (opts_json.contains("flip_horizontal"))
-            opts.flip_horizontal = opts_json["flip_horizontal"].get<bool>();
-        if (opts_json.contains("flip_vertical"))
-            opts.flip_vertical = opts_json["flip_vertical"].get<bool>();
-
-        if (opts_json.contains("fit_mode")) {
-            std::string fit_str = opts_json["fit_mode"].get<std::string>();
-            if (fit_str == "LETTERBOX") opts.fit_mode = FitMode::LETTERBOX;
-            else if (fit_str == "CROP") opts.fit_mode = FitMode::CROP;
-            else if (fit_str == "STRETCH") opts.fit_mode = FitMode::STRETCH;
+        try {
+            apply_config_update(body, matrix_cfg, opts);
+            app_context->update_config(matrix_cfg, opts, true);
+        } catch (const json::exception &e) {
+                return crow::response(400, std::string("Configuration invalide : ") + e.what());
+        } catch (const std::runtime_error &e) {
+                return crow::response(500, e.what());
         }
-
-        if (opts_json.contains("color_mode")) {
-            std::string color_str = opts_json["color_mode"].get<std::string>();
-            if (color_str == "QUANTIZED_KMEANS") opts.color_mode = ColorMode::QUANTIZED_KMEANS;
-            else if (color_str == "GRAYSCALE") opts.color_mode = ColorMode::GRAYSCALE;
-            else if (color_str == "RGB565") opts.color_mode = ColorMode::RGB565;
-        }
-
-        if (opts_json.contains("background_color") && opts_json["background_color"].is_array() && opts_json[
-                "background_color"].size() == 3) {
-            opts.background_color.r = opts_json["background_color"][0].get<uint8_t>();
-            opts.background_color.g = opts_json["background_color"][1].get<uint8_t>();
-            opts.background_color.b = opts_json["background_color"][2].get<uint8_t>();
-        }
-
-        app_context->update_config(matrix_cfg, opts, true);
 
         return crow::response(200, "Configuration mise à jour avec succès.");
     });

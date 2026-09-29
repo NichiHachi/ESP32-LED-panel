@@ -9,6 +9,8 @@
 #include <algorithm>
 #include "miniz.h"
 
+constexpr size_t max_uncompressed_size = 64 * 1024 * 1024;
+
 struct FrameData {
     std::vector<uint8_t> pixels;
     uint16_t width{0};
@@ -42,6 +44,7 @@ public:
         }
 
         mz_uint num_files = mz_zip_reader_get_num_files(&zip_archive);
+        size_t total_uncompressed_size = 0;
 
         for (mz_uint i = 0; i < num_files; ++i) {
             mz_zip_archive_file_stat file_stat;
@@ -54,6 +57,11 @@ public:
             }
 
             size_t uncompressed_size = file_stat.m_uncomp_size;
+            if (uncompressed_size == 0 || total_uncompressed_size + uncompressed_size > max_uncompressed_size) {
+                continue;
+            }
+
+            total_uncompressed_size += uncompressed_size;
 
             if (std::vector<uint8_t> buffer(uncompressed_size); mz_zip_reader_extract_to_mem(&zip_archive, i, buffer.data(), uncompressed_size, 0)) {
                 std::string_view file_bytes(reinterpret_cast<const char *>(buffer.data()), buffer.size());
@@ -91,6 +99,11 @@ public:
         );
 
         if (data && frame_count > 0) {
+            if (w <= 0 || h <= 0 || w > UINT16_MAX || h > UINT16_MAX) {
+                if (delays) STBI_FREE(delays);
+                STBI_FREE(data);
+                return anim;
+            }
             anim.valid = true;
             anim.is_animated = (frame_count > 1);
 
@@ -143,6 +156,10 @@ public:
         );
 
         if (img) {
+            if (w <= 0 || h <= 0 || w > UINT16_MAX || h > UINT16_MAX) {
+                STBI_FREE(img);
+                return anim;
+            }
             anim.valid = true;
             anim.is_animated = false;
 
@@ -150,8 +167,12 @@ public:
             frame.width = static_cast<uint16_t>(w);
             frame.height = static_cast<uint16_t>(h);
             frame.delay_ms = 0;
-            frame.pixels.assign(img, img + (w * h * 3));
-
+            frame.pixels.reserve(static_cast<size_t>(w) * h * 3);
+            for (size_t i = 0; i < static_cast<size_t>(w) * h * 4; i += 4) {
+                frame.pixels.push_back(img[i]);
+                frame.pixels.push_back(img[i + 1]);
+                frame.pixels.push_back(img[i + 2]);
+            }
             anim.frames.push_back(std::move(frame));
             STBI_FREE(img);
         }

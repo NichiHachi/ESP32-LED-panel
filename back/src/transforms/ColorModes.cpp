@@ -35,6 +35,7 @@ void ColorProcessor::apply_corrections(Frame &frame, const ProcessingOptions &op
 
 void ColorProcessor::quantize_kmeans(Frame &frame, const int k) {
     if (frame.pixels.empty() || k <= 0) return;
+    const int effective_k = std::min(k, static_cast<int>(frame.pixels.size()));
 
     using sample_type = dlib::matrix<float, 3, 1>;
     std::vector<sample_type> samples;
@@ -49,13 +50,17 @@ void ColorProcessor::quantize_kmeans(Frame &frame, const int k) {
     }
 
     std::vector<sample_type> initial_centers;
-    dlib::find_clusters_using_kmeans(samples, initial_centers, k);
+    dlib::pick_initial_centers(effective_k, initial_centers, samples);
+    dlib::find_clusters_using_kmeans(samples, initial_centers);
 
-    // Réattribution des couleurs
+    if (initial_centers.empty()) return;
+    const int num_centers = static_cast<int>(initial_centers.size());
+
+    // 3. Réattribution des couleurs
     for (size_t i = 0; i < frame.pixels.size(); ++i) {
         int best_k = 0;
         float min_dist = dlib::length_squared(samples[i] - initial_centers[0]);
-        for (int j = 1; j < k; ++j) {
+        for (int j = 1; j < num_centers; ++j) {
             float dist = dlib::length_squared(samples[i] - initial_centers[j]);
             if (dist < min_dist) {
                 min_dist = dist;

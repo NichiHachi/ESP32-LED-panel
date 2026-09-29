@@ -1,15 +1,33 @@
 #include "transforms/FitModes.h"
 #include <cmath>
 #include <algorithm>
+#include <iostream>
 
 Frame FitProcessor::grid_downsample(const unsigned char* raw_img, const int src_w, const int src_h, const int target_w, const int target_h) {
     Frame out;
+    if (raw_img == nullptr || src_w <= 0 || src_h <= 0 || target_w <= 0 || target_h <= 0) {
+        std::cerr << "In FitProcessor::grid_downsample : issue with data" << std::endl;
+        return out;
+    }
+
     out.width = target_w;
     out.height = target_h;
     out.pixels.resize(target_w * target_h);
 
     const float cell_w = static_cast<float>(src_w) / static_cast<float>(target_w);
     const float cell_h = static_cast<float>(src_h) / static_cast<float>(target_h);
+
+    if (target_w >= src_w || target_h >= src_h) {
+        for (int ty = 0; ty < target_h; ++ty) {
+            for (int tx = 0; tx < target_w; ++tx) {
+                const int sx = std::min(src_w - 1, static_cast<int>((tx + 0.5f) * cell_w));
+                const int sy = std::min(src_h - 1, static_cast<int>((ty + 0.5f) * cell_h));
+                const int src_idx = (sy * src_w + sx) * 3;
+                out.pixels[ty * target_w + tx] = {raw_img[src_idx], raw_img[src_idx + 1], raw_img[src_idx + 2]};
+            }
+        }
+        return out;
+    }
 
     for (int ty = 0; ty < target_h; ++ty) {
         for (int tx = 0; tx < target_w; ++tx) {
@@ -102,6 +120,10 @@ Frame FitProcessor::apply_letterbox(const unsigned char* raw_data, const int src
 }
 
 Frame FitProcessor::apply(const unsigned char* raw_data, const int src_w, const int src_h, const LedMatrixConfig& config, const ProcessingOptions& opts) {
+    if (config.width <= 0 || config.height <= 0) {
+        return {};
+    }
+
     switch (opts.fit_mode) {
         case FitMode::STRETCH:
             return apply_stretch(raw_data, src_w, src_h, config.width, config.height);
