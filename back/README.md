@@ -1,6 +1,6 @@
 # Documentation API Backend – ESPLedManager
 
-Le backend **ESPLedManager** est un serveur REST écrit en C++ (utilisant la bibliothèque Crow). Il permet de gérer dynamiquement la configuration de traitement d'images destinées à une matrice de LED, ainsi que de prévisualiser en temps réel le résultat généré.
+Le backend **ESPLedManager** est un serveur REST écrit en Rust. Il permet de gérer dynamiquement la configuration de traitement d'images destinées à une matrice de LED, ainsi que de prévisualiser en temps réel le résultat généré.
 
 * **Base URL** : `http://localhost:18080` *(ou l'IP/domaine de votre serveur)*
 * **Formats supportés** : JSON pour la configuration, `multipart/form-data` ou binaire brut pour l'envoi d'images.
@@ -12,31 +12,28 @@ Voici la section **Prérequis / Requirements** à intégrer au début de votre f
 
 ## Prérequis (Requirements)
 
+Le backend est maintenant écrit en **Rust**. Il nécessite Rust stable avec Cargo.
+
 Pour compiler et exécuter le serveur backend **ESPLedManager**, votre environnement de développement doit disposer des outils et dépendances suivants :
 
 ### 1. Outils de build et compilateur
 
-* **Compilateur C++** : Support de **C++20** (ou plus récent)
-* `g++` (v9+) ou `clang++` (v10+)
-
-
-* **Système de build** : **[xmake](https://xmake.io/?utm_source=gemini)** (v2.5+)
-* *Installation rapide (Linux/macOS)* : `curl -fsSL https://xmake.io/shget.text | bash`
+* **Rust** : version stable récente (`rustc` et `cargo`)
 
 
 
 ---
 
-### 2. Dépendances & Bibliothèques C++
+### 2. Dépendances & Bibliothèques Rust
 
-Les dépendances C++ principales gérées par le projet (ou via le gestionnaire de paquets de `xmake`) :
+Les dépendances sont déclarées dans `Cargo.toml` et installées automatiquement par Cargo :
 
 | Bibliothèque                                                                       | Version requise | Rôle                                                         |
 |------------------------------------------------------------------------------------|-----------------|--------------------------------------------------------------|
-| **[Crow](https://www.google.com/search?q=https://crowcpp.org/&utm_source=gemini)** | `v1.0+`         | Framework web C++ (routes HTTP, support multipart, REST API) |
-| **[nlohmann/json](https://github.com/nlohmann/json?utm_source=gemini)**            | `v3.10+`        | Analyse et sérialisation JSON pour les configurations        |
-| **[Asio](https://think-async.com/Asio/?utm_source=gemini)** / **Boost.Asio**       | -               | Moteur réseau asynchrone utilisé sous-jacent par Crow        |
-| **`pthread` / `threads**`                                                          | -               | Support du multithreading HTTP                               |
+| **Axum / Tokio** | - | Serveur HTTP asynchrone et multithread |
+| **image** | - | Décodage et encodage PNG, JPEG, GIF et WebP |
+| **serde / serde_json** | - | Configuration et réponses JSON |
+| **zip / multer** | - | Archives ZIP et formulaires multipart |
 
 ---
 
@@ -54,11 +51,8 @@ cd ESPLedManager
    Assurez-vous qu'un fichier `config.json` valide est présent à la racine du projet (ou un fichier par défaut sera créé au premier lancement).
 3. **Compilation et Lancement** :
 ```bash
-# Compiler le projet
-xmake
-
-# Lancer le serveur backend depuis la racine du projet
-xmake run -w .
+# Compiler et lancer le serveur backend
+cargo run --release
 
 ```
 
