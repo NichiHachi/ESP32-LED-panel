@@ -1,6 +1,4 @@
-/.idea/*
-/back/.xmake/*
-/back/build/*
+/.idea/
 /unziped/
 /.xmake/
 /back/target/

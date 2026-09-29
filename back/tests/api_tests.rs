@@ -11,10 +11,8 @@ mod tests {
         io::Write,
         sync::{Arc, RwLock},
     };
-    use tower::ServiceExt; // Fournit la méthode .oneshot() pour tester l'application Axum
+    use tower::ServiceExt;
 
-    // Import des modules du crate principal
-    // (Ajustez les chemins si le nom de votre crate dans Cargo.toml est différent)
     use esp_led_manager::{
         models::{AppContext, SharedContext},
         routes,
