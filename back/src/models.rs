@@ -91,7 +91,7 @@ pub struct AppContext {
     pub config_path: String,
     pub matrix: MatrixConfig,
     pub options: Options,
-    pub esp_url: String
+    pub ws_tx: Option<tokio::sync::mpsc::Sender<Vec<Vec<u8>>>>,
 }
 
 impl Default for AppContext {
@@ -105,7 +105,7 @@ impl Default for AppContext {
                 enable_serpentine_layout: false,
             },
             options: Options::default(),
-            esp_url: "http://192.168.1.100".into(),
+            ws_tx: None,
         }
     }
 }

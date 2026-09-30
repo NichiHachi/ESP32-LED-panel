@@ -19,6 +19,5 @@
     "flip_vertical": false,
     "gamma": 1.0,
     "rotation_deg": 0
-  },
-  "esp_url" : "192.168.1.100"
+  }
 }

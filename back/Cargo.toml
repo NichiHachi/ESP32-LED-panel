@@ -4,7 +4,7 @@ version = "1.0.0"
 edition = "2021"
 
 [dependencies]
-axum = { version = "0.8", features = ["multipart"] }
+axum = { version = "0.8", features = ["multipart", "ws"] }
 base64 = "0.23.1"
 futures-util = "0.3"
 image = { version = "0.25", features = ["gif", "jpeg", "png", "webp"] }

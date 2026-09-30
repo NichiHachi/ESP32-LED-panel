@@ -28,6 +28,7 @@ async fn main() {
             get(routes::get_config).post(routes::update_config),
         )
         .route("/esp", post(esp::process_for_esp32))
+        .route("/esp/ws", get(esp::ws_handler))
         .with_state(state);
     let listener = tokio::net::TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], 18080)))
         .await
