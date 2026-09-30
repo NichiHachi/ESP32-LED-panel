@@ -24,7 +24,7 @@ mod tests {
         Router::new()
             .route("/", post(routes::process))
             .route(
-                "/api/config",
+                "/config",
                 get(routes::get_config).post(routes::update_config),
             )
             .with_state(state)
@@ -61,7 +61,7 @@ mod tests {
     }
 
     // =========================================================================
-    // 1. TESTS CONFORMITÉ README : GET & POST /api/config
+    // 1. TESTS CONFORMITÉ README : GET & POST /config
     // =========================================================================
 
     #[tokio::test]
@@ -72,7 +72,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri("/api/config")
+                    .uri("/config")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -133,7 +133,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/api/config")
+                    .uri("/config")
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(payload.to_string()))
                     .unwrap(),
@@ -148,7 +148,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("GET")
-                    .uri("/api/config")
+                    .uri("/config")
                     .body(Body::empty())
                     .unwrap(),
             )
@@ -182,7 +182,7 @@ mod tests {
             .oneshot(
                 Request::builder()
                     .method("POST")
-                    .uri("/api/config")
+                    .uri("/config")
                     .header(header::CONTENT_TYPE, "application/json")
                     .body(Body::from(payload.to_string()))
                     .unwrap(),

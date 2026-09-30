@@ -25,13 +25,13 @@ fn error_response(status: StatusCode, message: impl Into<String>) -> Response {
     (status, message.into()).into_response()
 }
 
-struct Upload {
-    bytes: Vec<u8>,
-    return_matrix: bool,
-    return_zip: bool,
+pub(crate) struct Upload {
+    pub(crate) bytes: Vec<u8>,
+    pub(crate) return_matrix: bool,
+    pub(crate) return_zip: bool,
 }
 
-async fn image_bytes(request: Request) -> Result<Upload, String> {
+pub(crate) async fn image_bytes(request: Request) -> Result<Upload, String> {
     let headers = request.headers().clone();
     let body = to_bytes(request.into_body(), MAX_UPLOAD_SIZE)
         .await
@@ -171,7 +171,7 @@ pub async fn process(
                 "pixels": f.pixels
             })).collect::<Vec<_>>()
         }))
-        .into_response();
+            .into_response();
     }
     if !animation.is_animated {
         return match encode_png(&frames[0], serpentine) {
@@ -202,7 +202,7 @@ pub async fn process(
         "frame_count": frames.len(),
         "frames": encoded
     }))
-    .into_response()
+        .into_response()
 }
 
 pub async fn get_config(State(SharedContext(state)): State<SharedContext>) -> impl IntoResponse {

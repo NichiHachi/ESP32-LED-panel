@@ -234,3 +234,23 @@ fn quantize(pixels: &mut [Rgb], k: usize) {
 fn distance(p: &Rgb, c: &[f32; 3]) -> f32 {
     (p.r as f32 - c[0]).powi(2) + (p.g as f32 - c[1]).powi(2) + (p.b as f32 - c[2]).powi(2)
 }
+impl Frame {
+    /// Convertit les pixels en buffer binaire RGB888 brut (3 octets / pixel)
+    pub fn to_raw_rgb888(&self, serpentine: bool) -> Vec<u8> {
+        let mut bytes = Vec::with_capacity(self.width * self.height * 3);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let sx = if serpentine && y % 2 == 1 {
+                    self.width - 1 - x
+                } else {
+                    x
+                };
+                let p = self.pixels[y * self.width + sx];
+                bytes.push(p.r);
+                bytes.push(p.g);
+                bytes.push(p.b);
+            }
+        }
+        bytes
+    }
+}

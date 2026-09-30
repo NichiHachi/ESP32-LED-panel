@@ -119,16 +119,8 @@ pub fn apply_update(
         options.color_mode = parse_mode(value, "color_mode")?;
     }
     if let Some(value) = options_value.get("background_color") {
-        let values: Vec<u8> = serde_json::from_value(value.clone())
-            .map_err(|_| "invalid background_color".to_string())?;
-        if values.len() != 3 {
-            return Err("background_color must contain 3 values".into());
-        }
-        options.background_color = Rgb {
-            r: values[0],
-            g: values[1],
-            b: values[2],
-        };
+        options.background_color = serde_json::from_value::<Rgb>(value.clone())
+            .map_err(|_| "invalid background_color (expected object with r, g, b)".to_string())?;
     }
     validate_config(matrix, options)
 }

@@ -1,4 +1,4 @@
-use esp_led_manager::{config, models, routes};
+use esp_led_manager::{config, esp, models, routes};
 use tracing::info;
 
 #[tokio::main]
@@ -24,9 +24,10 @@ async fn main() {
     let app = Router::new()
         .route("/", post(routes::process))
         .route(
-            "/api/config",
+            "/config",
             get(routes::get_config).post(routes::update_config),
         )
+        .route("/esp", post(esp::process_for_esp32))
         .with_state(state);
     let listener = tokio::net::TcpListener::bind(SocketAddr::from(([0, 0, 0, 0], 18080)))
         .await
