@@ -14,10 +14,11 @@
     "brightness": 1.2000000476837158,
     "color_mode": "QUANTIZED_KMEANS",
     "contrast": 1.100000023841858,
-    "fit_mode": "CROP",
+    "fit_mode": "LETTERBOX",
     "flip_horizontal": false,
     "flip_vertical": false,
     "gamma": 1.0,
-    "rotation_deg": 90
-  }
+    "rotation_deg": 0
+  },
+  "esp_url" : "192.168.1.100"
 }

@@ -1,6 +1,6 @@
 use axum::{
     extract::{Request, State},
-    http::{header, StatusCode},
+    http::{StatusCode},
     response::{IntoResponse, Response},
 };
 
@@ -26,9 +26,9 @@ pub async fn process_for_esp32(
         Err(e) => return (StatusCode::BAD_REQUEST, e).into_response(),
     };
 
-    let (matrix, options) = {
+    let (matrix, options, esp_url) = {
         let context = state.read().unwrap();
-        (context.matrix.clone(), context.options.clone())
+        (context.matrix.clone(), context.options.clone(), context.esp_url.clone())
     };
 
     // Transformation des frames au format cible (dimension matrix.width x matrix.height)
@@ -45,18 +45,35 @@ pub async fn process_for_esp32(
         })
         .collect();
 
-    // Concaténation des données binaires (RGB888 brut)
     let mut payload = Vec::new();
     for frame in &processed_frames {
         payload.extend(frame.to_raw_rgb888(matrix.enable_serpentine_layout));
     }
 
-    (
-        [
-            (header::CONTENT_TYPE, "application/octet-stream"),
-            (header::HeaderName::from_static("x-frame-count"), &processed_frames.len().to_string()),
-        ],
-        payload,
-    )
-        .into_response()
+    // Envoi du binaire à l'ESP32
+    let client = reqwest::Client::new();
+    let res = client
+        .post(&esp_url)
+        .header("Content-Type", "application/octet-stream")
+        .header("x-frame-count", processed_frames.len().to_string())
+        .body(payload)
+        .send()
+        .await;
+
+    // 4. Réponse au demandeur
+    match res {
+        Ok(response) if response.status().is_success() => {
+            (StatusCode::OK, "ok !").into_response()
+        }
+        Ok(response) => (
+            StatusCode::BAD_GATEWAY,
+            format!("Erreur retournée par l'ESP32: {}", response.status()),
+        )
+            .into_response(),
+        Err(err) => (
+            StatusCode::GATEWAY_TIMEOUT,
+            format!("Impossible de joindre l'ESP32 : {err}"),
+        )
+            .into_response(),
+    }
 }
