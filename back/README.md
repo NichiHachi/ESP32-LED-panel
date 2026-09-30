@@ -426,5 +426,12 @@ async function processAndPreviewImage(fileInput) {
     console.error('Erreur lors du traitement d\'image :', error);
   }
 }
+```
 
+### Utiliser l'envoi à l'ESP
+```
+>>> curl -X POST "http://localhost:18080/?return_zip=true" -F "image=@back/example/halteroman.gif" --output "halteroman.zip"
+   [...]
+>>> curl -X POST "http://localhost:18080/esp" -F "image=@halteroman.zip"
+ok !
 ```
