@@ -11,9 +11,9 @@
       "g": 0,
       "r": 0
     },
-    "brightness": 1,
+    "brightness": 1.0,
     "color_mode": "QUANTIZED_KMEANS",
-    "contrast": 1,
+    "contrast": 1.0,
     "fit_mode": "LETTERBOX",
     "flip_horizontal": false,
     "flip_vertical": false,
