@@ -92,6 +92,7 @@ pub struct AppContext {
     pub matrix: MatrixConfig,
     pub options: Options,
     pub ws_tx: Option<tokio::sync::mpsc::Sender<Vec<Vec<u8>>>>,
+    pub ws_connection_id: u64,
 }
 
 impl Default for AppContext {
@@ -106,6 +107,7 @@ impl Default for AppContext {
             },
             options: Options::default(),
             ws_tx: None,
+            ws_connection_id: 0,
         }
     }
 }
