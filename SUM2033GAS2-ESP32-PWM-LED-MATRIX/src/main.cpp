@@ -60,7 +60,9 @@ static Sum2033Display display(kPanelW * kPanelCount, kPanelH, /*fourScan=*/true,
                               /*chainLength=*/kPanelCount);
 static WebsocketsClient webSocket;
 
-// Copy an RGB888 frame into the display canvas.
+// Copy an RGB888 frame into the display canvas. The WebSocket protocol keeps
+// the server's 8-bit R, G and B values; RGB565 is only used by Adafruit_GFX's
+// drawing API, not by received frames.
 static bool showFrame(const uint8_t* payload, size_t length) {
   uint8_t* fb = display.buffer();
   if (!fb) return false;

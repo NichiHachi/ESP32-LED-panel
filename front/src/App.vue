@@ -8,7 +8,7 @@ import UploadPanel from './components/UploadPanel.vue'
 import { listHistory, removeHistory, resultFromHistory, saveHistory, type HistoryItem } from './services/history'
 import type { Config, Matrix, ProcessedResult } from './types'
 
-const config = reactive<Config>({ matrix: { width: 64, height: 64, max_palette_colors: 64, enable_serpentine_layout: false }, options: { fit_mode: 'LETTERBOX', color_mode: 'QUANTIZED_KMEANS', background_color: { r: 0, g: 0, b: 0 }, brightness: 1, contrast: 1, gamma: 1, rotation_deg: 0, flip_horizontal: false, flip_vertical: false } })
+const config = reactive<Config>({ matrix: { width: 64, height: 64, max_palette_colors: 64, enable_serpentine_layout: false }, options: { fit_mode: 'LETTERBOX', color_mode: 'RGB888', background_color: { r: 0, g: 0, b: 0 }, brightness: 1, contrast: 1, gamma: 1, rotation_deg: 0, flip_horizontal: false, flip_vertical: false } })
 const file = ref<File | null>(null); const originalUrl = ref(''); const resultUrl = ref(''); const result = ref<ProcessedResult | null>(null); const matrix = ref<Matrix | null>(null)
 const history = ref<HistoryItem[]>([]); const loading = ref(false); const saving = ref(false); const connected = ref(false); const notice = ref(''); const error = ref(''); const dragging = ref(false)
 const api = (path: string) => `${import.meta.env.VITE_API_URL || '/api'}${path}`

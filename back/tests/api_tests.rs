@@ -168,6 +168,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_color_mode_can_be_selected_from_config() {
+        let app = setup_test_app();
+
+        for color_mode in ["QUANTIZED_KMEANS", "RGB888", "RGB565", "GRAYSCALE"] {
+            let response = app
+                .clone()
+                .oneshot(
+                    Request::builder()
+                        .method("POST")
+                        .uri("/config")
+                        .header(header::CONTENT_TYPE, "application/json")
+                        .body(Body::from(
+                            json!({ "options": { "color_mode": color_mode } }).to_string(),
+                        ))
+                        .unwrap(),
+                )
+                .await
+                .unwrap();
+
+            assert_eq!(response.status(), StatusCode::OK, "mode: {color_mode}");
+        }
+    }
+
+    #[tokio::test]
     async fn test_readme_post_config_invalid_rotation() {
         let app = setup_test_app();
 

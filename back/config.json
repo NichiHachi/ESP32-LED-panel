@@ -3,7 +3,7 @@
     "enable_serpentine_layout": false,
     "height": 32,
     "max_palette_colors": 64,
-    "width": 32
+    "width": 64
   },
   "options": {
     "background_color": {
@@ -12,7 +12,7 @@
       "r": 0
     },
     "brightness": 1.0,
-    "color_mode": "QUANTIZED_KMEANS",
+    "color_mode": "RGB888",
     "contrast": 1.0,
     "fit_mode": "LETTERBOX",
     "flip_horizontal": false,

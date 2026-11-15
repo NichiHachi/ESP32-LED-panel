@@ -6,7 +6,7 @@ export type Config = {
   matrix: { width: number; height: number; max_palette_colors: number; enable_serpentine_layout: boolean }
   options: {
     fit_mode: 'LETTERBOX' | 'CROP' | 'STRETCH'
-    color_mode: 'QUANTIZED_KMEANS' | 'GRAYSCALE' | 'RGB565'
+    color_mode: 'RGB888' | 'QUANTIZED_KMEANS' | 'GRAYSCALE' | 'RGB565'
     background_color: Rgb
     brightness: number; contrast: number; gamma: number; rotation_deg: number
     flip_horizontal: boolean; flip_vertical: boolean

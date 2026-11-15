@@ -45,6 +45,8 @@ impl Default for FitMode {
 pub enum ColorMode {
     #[serde(rename = "QUANTIZED_KMEANS")]
     QuantizedKmeans,
+    #[serde(rename = "RGB888")]
+    Rgb888,
     #[serde(rename = "RGB565")]
     Rgb565,
     #[serde(rename = "GRAYSCALE")]

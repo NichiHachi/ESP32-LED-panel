@@ -143,7 +143,7 @@ Permet de modifier les paramètres de traitement (luminosité, rotation, dimensi
 | Champ | Type | Valeurs acceptées | Description |
 | --- | --- | --- | --- |
 | `fit_mode` | `string` | `"LETTERBOX"`, `"CROP"`, `"STRETCH"` | Mode d'ajustement à la taille de la matrice. |
-| `color_mode` | `string` | `"QUANTIZED_KMEANS"`, `"GRAYSCALE"`, `"RGB565"` | Traitement/Réduction des couleurs. |
+| `color_mode` | `string` | `"QUANTIZED_KMEANS"`, `"RGB888"`, `"GRAYSCALE"`, `"RGB565"` | Traitement/réduction des couleurs. `QUANTIZED_KMEANS` utilise `max_palette_colors`, `RGB888` conserve les 8 bits de chaque composante. |
 | `rotation_deg` | `int` | `0`, `90`, `180`, `270` | Angle de rotation de l'image. |
 | `background_color` | `array[int]` | `[R, G, B]` (0 à 255) | Couleur de fond pour le mode `LETTERBOX`. |
 
