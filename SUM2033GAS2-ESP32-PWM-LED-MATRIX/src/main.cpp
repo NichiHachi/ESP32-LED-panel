@@ -12,22 +12,12 @@ using namespace websockets;
 // Two 32x32 P6 RGB modules (1/4 scan) chained horizontally: 64x32 canvas.
 // Frames received over WebSocket are shown on the chain.
 //
-// Four-scan is handled by Sum2033Display (fourScan = true, chainLength = 2):
-// the driver is configured for a 128x16 DMA frame (8 row addresses, 4 physical
-// rows lit per address) and flip() maps the 64x32 canvas onto it.
-//
-// Wiring: Seengreat / Waveshare-style RGB Matrix Adapter Board (E), rev2.2,
-// with an ESP32-S3-DevKitC-1. This is the V2.x S3 pin mapping from the board
-// documentation:
-//
-//   R1=18  G1=8   B1=17
-//   R2=16  G2=1   B2=15
-//   A=7    B=48   C=6   D=47   E=2
-//   CLK=5  LAT=21 OE=4 (OE is the GCLK input of the SUM2033)
+// Paramètres adaptés pour SUM2030GAS2 :
+// - scanField = 15 (correction du décalage de balayage)
+// - d = -1, e = -1 (pas de broches D et E pour du 32x32 four-scan)
+// - gclkMultiplier = 8 (limite matérielle du SUM2030)
 
-// WebSocket server (same protocol as the original single-panel project).
-// The server sends raw RGB888 frames; we display them and answer "ACK".
-static const char* kServerHost = "10.169.29.225";
+static const char* kServerHost = "192.168.1.97";
 static const uint16_t kServerPort = 18080;
 static const char* kServerPath = "/esp/ws";
 
@@ -49,23 +39,19 @@ static Sum2033Config panelConfig()
   cfg.pins.a = 7;
   cfg.pins.b = 48;
   cfg.pins.c = 6;
-  cfg.pins.d = 47;
-  cfg.pins.e = 2;
+  cfg.pins.d = -1; // Désactivé pour le four-scan 32x32
+  cfg.pins.e = -1; // Désactivé pour le four-scan 32x32
 
   cfg.pins.clk = 5;
   cfg.pins.lat = 21;
   cfg.pins.oe  = 4; /* also GCLK */
 
-  // width and scan are set by Sum2033Display::begin() from the canvas size:
-  // two four-scan 32x32 panels -> DMA 128x16, scan = 8 (8 row addresses).
+  cfg.brightness = 48;      // 0-63 (6 bits)
+  cfg.colorBits = 10;       // 10 bits (recommandé pour la stabilité)
+  cfg.gclkMultiplier = 8;   // Le SUM2030 ne supporte que x8 (datasheet)
 
-  cfg.brightness = 16;      // 0-63  (6 bits), 16 ~= 25 %
-  cfg.colorBits = 13;       // 10-13 (2 bits)
-  cfg.gclkMultiplier = 16;  // 8 or 16
-
-  // Every panel refresh also uploads a complete frame, so this sets both the
-  // refresh rate and the max frame rate. Lower it if you see random speckles.
-  cfg.clockHz = 10000000;
+  cfg.clockHz = 4000000;    // Fréquence d'horloge stable (4 MHz)
+  cfg.scanField = 15;       // Valeur correcte trouvée pour le SUM2030
   return cfg;
 }
 
@@ -75,10 +61,6 @@ static Sum2033Display display(kPanelW * kPanelCount, kPanelH, /*fourScan=*/true,
 static WebsocketsClient webSocket;
 
 // Copy an RGB888 frame into the display canvas.
-//  - >= canvas size (64x32x3): treated as a full-canvas frame.
-//  - >= one panel (32x32x3): treated as a single-panel image and tiled across
-//    the chain, so the same picture shows on every panel.
-// Returns false if the payload is too small.
 static bool showFrame(const uint8_t* payload, size_t length) {
   uint8_t* fb = display.buffer();
   if (!fb) return false;
@@ -115,7 +97,6 @@ static void onMessageCallback(WebsocketsMessage message) {
   Serial.printf("WS frame: %u bytes\n", unsigned(length));
 
   if (showFrame(payload, length)) {
-    // Acknowledge so the server can send the next frame.
     webSocket.send("ACK");
   } else {
     Serial.printf("WS frame too small (need >= %u bytes)\n",
@@ -192,7 +173,6 @@ void setup()
   webSocket.onMessage(onMessageCallback);
   webSocket.onEvent(onEventsCallback);
 
-  // Retry a few times: the first handshake occasionally fails on ESP32.
   for (uint8_t attempt = 0; attempt < 5; ++attempt) {
     if (connectWebSocket()) break;
     delay(2000);
@@ -203,7 +183,6 @@ void setup()
 void loop()
 {
   if (WiFi.status() != WL_CONNECTED) {
-    // The ESP32 WiFi stack reconnects automatically; just wait for it.
     delay(100);
     return;
   }
@@ -214,10 +193,6 @@ void loop()
     return;
   }
 
-  // Wait 5 s after the last successful poll before reconnecting. Opening a
-  // new socket while the server still has the old one registered makes the
-  // server drop its frame sender (it stores only one), so the new connection
-  // would never receive frames.
   if (millis() - lastReconnectAttempt > 5000) {
     lastReconnectAttempt = millis();
     connectWebSocket();
