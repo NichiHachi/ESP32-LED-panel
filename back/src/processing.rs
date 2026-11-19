@@ -157,6 +157,7 @@ pub fn transform(mut frame: Frame, options: &Options, max_colors: i32) -> Frame 
         }
     }
     match options.color_mode {
+        ColorMode::Rgb888 => {}
         ColorMode::Grayscale => {
             for p in &mut rotated.pixels {
                 let v = (0.299 * p.r as f32 + 0.587 * p.g as f32 + 0.114 * p.b as f32) as u8;
